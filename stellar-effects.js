@@ -61,12 +61,12 @@ export function createStellarEffects(system, star, glow) {
   for(let i=0;i<9;i++){
     const points=[];for(let j=0;j<=48;j++){const a=j/48*Math.PI;points.push(new THREE.Vector3(Math.cos(a)*.3, .952+Math.sin(a)*(.25+(i%3)*.11),0));}
     const geometry=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points),64,.012,5,false);
-    const fm=material({time:{value:0},offset:{value:i*1.17},tint:{value:new THREE.Color('#ffad54')},power:{value:1}},
-      `varying vec2 tex;void main(){tex=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+    const fm=material({time:{value:0},offset:{value:i*1.17},growth:{value:0},tint:{value:new THREE.Color()},power:{value:1}},
+      `uniform float growth;varying vec2 tex;void main(){tex=uv;vec3 p=position;p.y=.952+(p.y-.952)*growth;p.z+=sin(uv.x*3.14159)*growth*.07;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}`,
       `varying vec2 tex;uniform float time;uniform float offset;uniform vec3 tint;uniform float power;
       void main(){float moving=.55+.45*sin(tex.x*27.-time*2.+offset);float ends=sin(tex.x*3.14159);gl_FragColor=vec4(tint*(1.+moving*.8),(.3+moving*.6)*power*sqrt(max(ends,0.)));}`,transparent);
     const loop=new THREE.Mesh(geometry,fm);loop.rotation.set(i*.73,i*1.39,i*.91);flares.add(loop);flareMeshes.push(loop);
-    const halo=new THREE.Mesh(geometry,fm.clone());halo.scale.setScalar(1.012);halo.material.uniforms.power.value=.23;flares.add(halo);flareMeshes.push(halo);
+    const halo=new THREE.Mesh(geometry,fm.clone());halo.rotation.copy(loop.rotation);halo.scale.setScalar(1.012);halo.material.uniforms.power.value=.23;flares.add(halo);flareMeshes.push(halo);
   }
 
   // A one-way expanding, corrugated shell; its phase also follows timeline scrubbing.
@@ -122,10 +122,16 @@ export function createStellarEffects(system, star, glow) {
     update({s,f,selected,time,dt,radius,reduced,playing,pixelRatio}){
       const key=selected+s;if(key!==stageKey){stageKey=key;stageAge=0;}
       if(!reduced&&!playing)stageAge+=dt;
-      surface.uniforms.time.value=time;surface.uniforms.tint.value.set(s===3?'#ff853b':selected==='sun'?'#ffc375':'#b6d9ff');surface.uniforms.giant.value=s===3?1:0;
+      surface.uniforms.time.value=time;surface.uniforms.tint.value.set(s===3?'#ff853b':s===5?'#d8edff':selected==='sun'?'#ffc375':'#b6d9ff');surface.uniforms.giant.value=s===3?1:0;
+      glow.material.uniforms.tint.value.copy(surface.uniforms.tint.value);
       gas.visible=s<2;gasMat.uniforms.time.value=time;gasMat.uniforms.collapse.value=s===0?f*.45:.45+f*.5;gasMat.uniforms.opacity.value=s===0?1:1-f*.85;
       flares.visible=s===1||s===2||s===3;flares.scale.setScalar(radius);flares.rotation.y=time*.024;
-      flareMeshes.forEach((m,i)=>{m.material.uniforms.time.value=time;m.material.uniforms.power.value=(i%2?.18:.85)*(.65+.35*Math.sin(time*.27+i));});
+      flareMeshes.forEach((m,i)=>{
+        const event=Math.floor(i/2),phase=(time/(9+event*.73)+event*.173)%1;
+        const birth=THREE.MathUtils.smoothstep(phase,.05,.24),fade=1-THREE.MathUtils.smoothstep(phase,.65,.96);
+        const u=m.material.uniforms;u.time.value=time;u.tint.value.copy(surface.uniforms.tint.value);
+        u.growth.value=.08+birth*(.65+phase*.9);u.power.value=(i%2?.2:.9)*birth*fade;
+      });
       const phase=Math.min(.98,f+(1-f)*(1-Math.exp(-stageAge/10)));
       shock.visible=s===4&&selected!=='sun';shock.scale.setScalar(.95+phase*4.65);shockMat.uniforms.time.value=time;shockMat.uniforms.phase.value=phase;
       debris.visible=s===4;debrisMat.uniforms.time.value=time;debrisMat.uniforms.phase.value=phase;debrisMat.uniforms.gentle.value=selected==='sun'?1:0;debrisMat.uniforms.pixelRatio.value=pixelRatio;
