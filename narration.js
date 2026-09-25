@@ -1,3 +1,4 @@
+import {hindiScripts} from './narration-hi.js';
 export const scripts={
   "nursery": "Our journey begins inside a nebula: a huge cloud of gas and dust. Gravity pulls some of this material together. This is where a new star can begin.",
   "protostar": "Gravity squeezes the gas into a growing ball called a protostar. As it shrinks, its centre gets hotter. It is not yet making steady energy by fusing hydrogen.",
@@ -17,17 +18,18 @@ export const scripts={
 const keys={sun:['nursery','protostar','sun-main','sun-giant','sun-nebula','sun-remnant'],massive:['nursery','protostar','massive-main','massive-giant','massive-explosion','massive-remnant'],heavy:['nursery','protostar','heavy-main','heavy-giant','heavy-explosion','heavy-remnant']};
 export function createNarrator({onProgress,onChange,onFinish,onError}){
   const audio=new Audio();audio.preload='auto';
-  let active=false,paused=false,stage=0,track='massive',generation=0,caption='';
-  function report(){onChange({active,paused,caption});}
+  let active=false,paused=false,stage=0,track='massive',generation=0,caption='',language='en';
+  function report(){onChange({active,paused,caption,language});}
   async function play(){const token=generation;try{await audio.play();}catch(e){if(token!==generation||!active||paused)return;paused=true;report();onError('Audio is waiting. Press Play to retry; subtitles remain available.');}}
   function load(){
-    generation++;audio.pause();const key=keys[track][stage];caption=scripts[key];
-    audio.src=new URL('./audio-'+key+'.mp3',import.meta.url).href;audio.load();report();if(!paused)play();
+    generation++;audio.pause();const key=keys[track][stage];caption=(language==='hi'?hindiScripts:scripts)[key];
+    audio.src=new URL('./audio-'+(language==='hi'?'hi-':'')+key+'.mp3',import.meta.url).href;audio.load();report();if(!paused)play();
   }
   audio.onended=()=>{if(!active||paused)return;if(stage<5){stage++;onProgress(stage/5);load();}else{active=false;report();onFinish();}};
   audio.onerror=()=>{if(active){paused=true;report();onError('Narration could not load. Press Play to retry, or stop the guide to explore freely.');}};
   return {
-    get active(){return active;},get paused(){return paused;},get caption(){return caption;},
+    get active(){return active;},get paused(){return paused;},get caption(){return caption;},get language(){return language;},
+    setLanguage(value){if(!['en','hi'].includes(value)||value===language)return;language=value;if(active){onProgress(stage/5);load();}else report();},
     start(t){track=t;stage=0;active=true;paused=false;onProgress(0);load();},
     stop(){generation++;active=false;paused=false;audio.pause();caption='';report();},
     toggle(){if(!active)return;paused=!paused;report();if(paused)audio.pause();else{if(audio.error)load();else play();}},
@@ -35,4 +37,3 @@ export function createNarrator({onProgress,onChange,onFinish,onError}){
     tick(){if(active&&!paused&&Number.isFinite(audio.duration)&&audio.duration>0)onProgress(stage===5?1:(stage+.92*Math.min(1,audio.currentTime/audio.duration))/5);}
   };
 }
-
