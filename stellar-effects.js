@@ -119,13 +119,13 @@ export function createStellarEffects(system, star, glow) {
   let stageKey='',stageAge=0;
   return {
     seek(){stageAge=0;},
-    update({s,f,selected,time,dt,radius,reduced,playing,pixelRatio}){
+    update({s,f,selected,time,dt,radius,reduced,playing,pixelRatio,inside=false}){
       const key=selected+s;if(key!==stageKey){stageKey=key;stageAge=0;}
       if(!reduced&&!playing)stageAge+=dt;
       surface.uniforms.time.value=time;surface.uniforms.tint.value.set(s===3?'#ff853b':s===5?'#d8edff':selected==='sun'?'#ffc375':'#b6d9ff');surface.uniforms.giant.value=s===3?1:0;
       glow.material.uniforms.tint.value.copy(surface.uniforms.tint.value);
-      gas.visible=s<2;gasMat.uniforms.time.value=time;gasMat.uniforms.collapse.value=s===0?f*.45:.45+f*.5;gasMat.uniforms.opacity.value=s===0?1:1-f*.85;
-      flares.visible=s===1||s===2||s===3;flares.scale.setScalar(radius);flares.rotation.y=time*.024;
+      gas.visible=!inside&&s<2;gasMat.uniforms.time.value=time;gasMat.uniforms.collapse.value=s===0?f*.45:.45+f*.5;gasMat.uniforms.opacity.value=s===0?1:1-f*.85;
+      flares.visible=!inside&&(s===1||s===2||s===3);flares.scale.setScalar(radius);flares.rotation.y=time*.024;
       flareMeshes.forEach((m,i)=>{
         const event=Math.floor(i/2),phase=(time/(9+event*.73)+event*.173)%1;
         const birth=THREE.MathUtils.smoothstep(phase,.05,.24),fade=1-THREE.MathUtils.smoothstep(phase,.65,.96);
