@@ -118,6 +118,7 @@ export function createStellarEffects(system, star, glow) {
   const lens=new THREE.Mesh(new THREE.SphereGeometry(.77,64,40),lensMat);hole.add(lens);
   let stageKey='',stageAge=0;
   return {
+    setQuality(level){gasGeometry.instanceCount=level==='low'?140:420;debrisGeometry.setDrawRange(0,level==='low'?1200:5500);},
     seek(){stageAge=0;},
     update({s,f,selected,time,dt,radius,reduced,playing,pixelRatio,inside=false}){
       const key=selected+s;if(key!==stageKey){stageKey=key;stageAge=0;}

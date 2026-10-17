@@ -28,6 +28,7 @@ export function createNarrator({onProgress,onChange,onFinish,onError}){
   audio.onended=()=>{if(!active||paused)return;if(stage<5){stage++;onProgress(stage/5);load();}else{active=false;report();onFinish();}};
   audio.onerror=()=>{if(active){paused=true;report();onError('Narration could not load. Press Play to retry, or stop the guide to explore freely.');}};
   return {
+    setVolume(value){audio.volume=Math.max(0,Math.min(1,value));},
     get active(){return active;},get paused(){return paused;},get caption(){return caption;},get language(){return language;},
     setLanguage(value){if(!['en','hi'].includes(value)||value===language)return;language=value;if(active){onProgress(stage/5);load();}else report();},
     start(t){track=t;stage=0;active=true;paused=false;onProgress(0);load();},
