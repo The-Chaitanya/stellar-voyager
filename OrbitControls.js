@@ -224,7 +224,7 @@ class OrbitControls extends Controls {
 		 * @type {boolean}
 		 * @default true
 		 */
-		this.enableZoom = true;
+		this.enableZoom = false;
 
 		/**
 		 * Speed of zooming / dollying.
@@ -1451,7 +1451,7 @@ class OrbitControls extends Controls {
 }
 
 function onPointerDown( event ) {
-	if ( typeof this.shouldOrbit === 'function' && ! this.shouldOrbit( event ) ) return;
+
 
 	if ( this.enabled === false ) return;
 
@@ -1665,7 +1665,6 @@ function onMouseMove( event ) {
 function onMouseWheel( event ) {
 
 	if ( this.enabled === false || this.enableZoom === false || this.state !== _STATE.NONE ) return;
-	if ( typeof this.shouldZoom === 'function' && ! this.shouldZoom( event ) ) return;
 
 	event.preventDefault();
 
