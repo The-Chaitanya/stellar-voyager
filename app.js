@@ -25,6 +25,25 @@ let renderer;try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,pow
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.8));renderer.xr.enabled=true;renderer.setClearColor(0x050811,0);$('universe').appendChild(renderer.domElement);
 const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(50,1,.05,500);camera.position.set(0,1.6,12);
 const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,1.6,0);controls.enableDamping=true;controls.minDistance=5;controls.maxDistance=24;controls.enablePan=false;
+const starRaycaster=new THREE.Raycaster(),starMouse=new THREE.Vector2();
+function isOverStar(clientX,clientY){
+  if(immersive?.active&&immersive.mode!=='exhibit'&&immersive.mode!=='onboarding')return true;
+  if(!renderer?.domElement||!camera)return false;
+  const rect=renderer.domElement.getBoundingClientRect();
+  if(clientX<rect.left||clientX>rect.right||clientY<rect.top||clientY>rect.bottom)return false;
+  starMouse.x=((clientX-rect.left)/rect.width)*2-1;starMouse.y=-((clientY-rect.top)/rect.height)*2+1;
+  starRaycaster.setFromCamera(starMouse,camera);
+  const dist=starRaycaster.ray.distanceToPoint(system.position);
+  const currentRadius=star?.scale?.x||1;
+  const hitRadius=(selected==='heavy'&&state().s===5)?3.0:Math.max(1.6,currentRadius*1.35);
+  return dist<=hitRadius;
+}
+controls.shouldZoom=e=>(e.ctrlKey||e.metaKey)||isOverStar(e.clientX,e.clientY);
+controls.shouldOrbit=e=>e.pointerType!=='touch'||isOverStar(e.clientX,e.clientY);
+renderer.domElement.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')renderer.domElement.style.touchAction=isOverStar(e.clientX,e.clientY)?'none':'pan-y';},{passive:true});
+const resetTouch=()=>{renderer.domElement.style.touchAction='pan-y';};
+renderer.domElement.addEventListener('pointerup',resetTouch,{passive:true});
+renderer.domElement.addEventListener('pointercancel',resetTouch,{passive:true});
 const system=new THREE.Group();system.position.set(0,1.6,0);scene.add(system);
 const noise=`float hash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}float noise(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}float fbm(vec3 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03;a*=.5;}return v;}`;
 const starMat=new THREE.ShaderMaterial({uniforms:{time:{value:0},tint:{value:new THREE.Color('#8ecbff')},dark:{value:0}},vertexShader:`varying vec3 vP;varying vec3 vN;void main(){vP=position;vN=normal;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vP;varying vec3 vN;uniform float time;uniform vec3 tint;uniform float dark;${noise}void main(){float n=fbm(vP*9.+vec3(time*.12));float fine=fbm(vP*36.-vec3(time*.2));float bright=.5+n*.9+smoothstep(.48,.8,fine)*.8;gl_FragColor=vec4(mix(tint*bright,vec3(.001),dark),1.);}`});
@@ -43,6 +62,8 @@ function choose(key){if(!Object.hasOwn(tracks,key))return;if(immersive?.active)i
 function updateUI(){const {s,f,track}=state(),d=track.data[s];const a=track.ages[s]+(s<5?(track.ages[s+1]-track.ages[s])*f:0);$('age').textContent=s===0&&progress===0?'Before a star is born':`≈ ${a<.01?a.toFixed(3):a.toFixed(2)} ${track.unit} years`;
 if(s!==lastStage||selected!==lastTrack){$('chapter').textContent=`CHAPTER ${String(s+1).padStart(2,'0')} / 06`;$('stageTitle').textContent=d[0];$('description').textContent=d[1];$('temperature').textContent=d[2];$('process').textContent=d[3];$('factLabel').textContent=d[4]||'SURFACE TEMPERATURE';$('journey').textContent=track.intro;$('destination').textContent=track.end;$('stages').replaceChildren(...track.data.map((v,i)=>{const b=document.createElement('button');b.textContent=v[0];b.className=i===s?'active':'';b.setAttribute('aria-label','Travel to '+v[0]);b.onclick=()=>setProgress(i/5);return b;}));lastStage=s;lastTrack=selected;}updateInteriorUI();drawPanel();}
 function togglePlay(){if(immersive?.active)immersive.setMode('exhibit');if(narrator?.active){narrator.toggle();return;}playing=!playing;$('play').textContent=playing?'Ⅱ Pause':'▶ Play journey';if(playing&&progress===1)setProgress(0);drawPanel();}
+function zoomBy(factor){const dir=new THREE.Vector3().subVectors(camera.position,controls.target);const len=THREE.MathUtils.clamp(dir.length()*factor,controls.minDistance,controls.maxDistance);dir.setLength(len);camera.position.addVectors(controls.target,dir);controls.update();}
+$('zoomIn')?.addEventListener('click',()=>zoomBy(0.8));$('zoomOut')?.addEventListener('click',()=>zoomBy(1.25));
 $('star').onchange=e=>choose(e.target.value);$('time').oninput=e=>setProgress(Number(e.target.value)/1000);$('play').onclick=togglePlay;$('back').onclick=()=>setProgress((Math.ceil(progress*5)-1)/5);$('next').onclick=()=>setProgress((Math.floor(progress*5)+1)/5);$('reset').onclick=()=>{vrLab.reset();camera.position.set(0,1.6,12);controls.target.set(0,1.6,0);controls.update();};$('science').onclick=()=>$('notes').showModal();$('close').onclick=()=>$('notes').close();
 
 function updateInteriorUI(){
@@ -83,7 +104,7 @@ const vrLab=createVRLab({renderer,scene,system,controllers,enabled:()=>!immersiv
 let xrSession=null;$('vr').onclick=async()=>{if(xrSession){await xrSession.end();return;}try{if(!navigator.xr||!await navigator.xr.isSessionSupported('immersive-vr')){showStatus('For immersive VR, open this link in a compatible headset browser. You can explore in 3D here.');return;}xrSession=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor']});await renderer.xr.setSession(xrSession);}catch(e){showStatus('VR could not start. Check headset connection and browser permissions, then try again.');xrSession=null;}};
 renderer.xr.addEventListener('sessionstart',()=>{controls.enabled=false;camera.position.set(0,1.6,0);system.position.set(0,2,-9);panel.visible=true;if(immersive?.active){panel.position.set(0,.85,-3.8);panel.scale.setScalar(.8);}$('vr').textContent='Exit VR';});renderer.xr.addEventListener('sessionend',()=>{xrSession=null;panel.visible=false;system.position.set(0,1.6,0);controls.enabled=true;$('reset').click();panel.position.set(0,1.05,-3.1);panel.scale.setScalar(1);$('vr').textContent='Enter VR ↗';});
 let statusTimeout;function showStatus(text){$('status').textContent=text;clearTimeout(statusTimeout);statusTimeout=setTimeout(()=>$('status').textContent='',9000);}
-function resize(){const w=$('app').clientWidth,h=$('app').clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();if(w<700){camera.setViewOffset(w,h,0,document.body.classList.contains('junior-mode')?30:120,w,h);}else camera.clearViewOffset();if(immersive?.active)immersive.reframe();}addEventListener('resize',resize);resize();$('star').value=selected;setProgress(progress);$('status').textContent='';
+function resize(){const w=$('universe')?.clientWidth||$('app').clientWidth||window.innerWidth,h=$('universe')?.clientHeight||window.innerHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();if(w<700){camera.setViewOffset(w,h,0,document.body.classList.contains('junior-mode')?30:120,w,h);}else camera.clearViewOffset();if(immersive?.active)immersive.reframe();}addEventListener('resize',resize);resize();$('star').value=selected;setProgress(progress);$('status').textContent='';
 
 narrator=createNarrator({
   onProgress:p=>setProgress(p,false),

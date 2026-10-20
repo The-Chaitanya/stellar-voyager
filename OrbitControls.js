@@ -475,7 +475,7 @@ class OrbitControls extends Controls {
 		const document = this.domElement.getRootNode(); // offscreen canvas compatibility
 		document.addEventListener( 'keydown', this._interceptControlDown, { passive: true, capture: true } );
 
-		this.domElement.style.touchAction = 'none'; // disable touch scroll
+		this.domElement.style.touchAction = 'pan-y';
 
 	}
 
@@ -1451,6 +1451,7 @@ class OrbitControls extends Controls {
 }
 
 function onPointerDown( event ) {
+	if ( typeof this.shouldOrbit === 'function' && ! this.shouldOrbit( event ) ) return;
 
 	if ( this.enabled === false ) return;
 
@@ -1664,6 +1665,7 @@ function onMouseMove( event ) {
 function onMouseWheel( event ) {
 
 	if ( this.enabled === false || this.enableZoom === false || this.state !== _STATE.NONE ) return;
+	if ( typeof this.shouldZoom === 'function' && ! this.shouldZoom( event ) ) return;
 
 	event.preventDefault();
 
