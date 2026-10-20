@@ -1,6 +1,6 @@
 const base = new URL('./', self.location.href);
 const SCOPE = encodeURIComponent(base.pathname);
-const CACHE = 'stellar-voyager-immersive-v3-' + SCOPE;
+const CACHE = 'stellar-voyager-immersive-v4-' + SCOPE;
 self.addEventListener('install', event => event.waitUntil(self.skipWaiting()));
 self.addEventListener('activate', event => event.waitUntil((async()=>{
   await self.clients.claim();
