@@ -31,8 +31,8 @@ export function createJuniorAdventure(api) {
   }
   function render(moveFocus=false){const data=copy();$('juniorStep').textContent=(language==='hi'?'खोज':'Discovery')+` ${mission+1} / 4`;$('juniorTitle').textContent=data.title;$('juniorSay').textContent=data.say;$('juniorTask').textContent=data.task;$('juniorNext').disabled=!done;$('juniorNext').textContent=language==='hi'?(mission===3?'मेरा बैज दिखाओ ★':'अगली खोज →'):(mission===3?'Show my explorer badge ★':'Next adventure →');$('juniorHint').textContent=language==='hi'?'मुझे इशारा दो':'Give me a hint';$('juniorListen').textContent=language==='hi'?'🔊 मुझे सुनाओ':'🔊 Read to me';$('juniorExperience').lang=language;renderChoices();badges();if(moveFocus)$('juniorTitle').focus();}
   function startMission(){document.body.classList.toggle('junior-board-mission',mission!==0);done=false;clouds.clear();story=0;feedback('');setScene();render(true);}
-  function enter(){active=true;document.body.classList.add('junior-mode');$('juniorExperience').hidden=false;try{localStorage.setItem('stellar-experience','junior');}catch{}startMission();}
-  function leave(){active=false;window.speechSynthesis?.cancel();document.body.classList.remove('junior-mode','junior-board-mission');$('juniorExperience').hidden=true;api.sun(.4);try{localStorage.setItem('stellar-experience','advanced');}catch{}}
+  function enter(){active=true;document.body.classList.add('junior-mode');$('juniorExperience').hidden=false;$('openJunior')?.setAttribute('aria-pressed','true');$('openImmersive')?.setAttribute('aria-pressed','false');try{localStorage.setItem('stellar-experience','junior');}catch{}startMission();}
+  function leave(){active=false;window.speechSynthesis?.cancel();document.body.classList.remove('junior-mode','junior-board-mission');$('juniorExperience').hidden=true;$('openJunior')?.setAttribute('aria-pressed','false');api.sun(.4);try{localStorage.setItem('stellar-experience','advanced');}catch{}}
   $('juniorLanguage').onchange=e=>{window.speechSynthesis?.cancel();language=e.target.value;feedback(done?copy().success:'');render();};
   $('juniorHint').onclick=()=>feedback(copy().hint);
   $('juniorListen').onclick=()=>{
@@ -49,6 +49,6 @@ export function createJuniorAdventure(api) {
   $('juniorGrownup').onclick=()=>$('juniorAdults').showModal();$('juniorCloseAdults').onclick=()=>$('juniorAdults').close();
   $('juniorAdvanced').onclick=()=>{$('juniorAdults').close();leave();};$('juniorRestart').onclick=()=>{completed.clear();save();mission=0;$('juniorAdults').close();startMission();};
   $('openJunior').onclick=enter;
-  let preference;try{preference=localStorage.getItem('stellar-experience');}catch{}if(preference!=='advanced')enter();
-  return {getState:()=>({active,mission,completed:[...completed],language,clouds:clouds.size,story}),enter};
+  
+  return {getState:()=>({active,mission,completed:[...completed],language,clouds:clouds.size,story}),enter,leave};
 }

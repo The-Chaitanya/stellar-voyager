@@ -139,6 +139,49 @@ const junior=createJuniorAdventure({
   inside(){if(narrator.active)narrator.stop();playing=false;immersive.setMode('walk');},
   progress:setProgress
 });
+function showImmersiveTab(){
+  if(junior?.getState().active)junior.leave();
+  $('openJunior')?.setAttribute('aria-pressed','false');
+  $('openImmersive')?.setAttribute('aria-pressed','true');
+  if(typeof $('immersiveMenu')?.showModal==='function'&&!$('immersiveMenu').open){
+    try{$('immersiveMenu').showModal();}catch{}
+  }
+}
+function showJuniorTab(){
+  if(immersive?.active)immersive.setMode('exhibit');
+  if($('immersiveMenu')?.open)$('immersiveMenu').close();
+  $('openImmersive')?.setAttribute('aria-pressed','false');
+  $('openJunior')?.setAttribute('aria-pressed','true');
+  junior.enter();
+}
+function returnToExhibit(){
+  if(junior?.getState().active)junior.leave();
+  if(immersive?.active)immersive.setMode('exhibit');
+  if($('immersiveMenu')?.open)$('immersiveMenu').close();
+  $('openJunior')?.setAttribute('aria-pressed','false');
+  $('openImmersive')?.setAttribute('aria-pressed','false');
+}
+$('openImmersive').onclick=showImmersiveTab;
+$('openJunior').onclick=showJuniorTab;
+document.querySelector('.brand')?.addEventListener('click',e=>{
+  e.preventDefault();
+  returnToExhibit();
+  history.replaceState(null,'',window.location.pathname);
+});
+$('openLab')?.addEventListener('click',()=>{
+  if(junior?.getState().active)junior.leave();
+  if(immersive?.active)immersive.setMode('exhibit');
+});
+$('vr')?.addEventListener('click',()=>{
+  if(junior?.getState().active)junior.leave();
+});
+$('immersiveMenu')?.addEventListener('close',()=>{
+  if(!immersive?.active)$('openImmersive')?.setAttribute('aria-pressed','false');
+});
+$('immersiveMenu')?.addEventListener('click',e=>{
+  if(e.target===$('immersiveMenu'))$('immersiveMenu').close();
+});
+showImmersiveTab();
 const clock=new THREE.Clock();let uiTick=0;
 renderer.setAnimationLoop(()=>{const dt=Math.min(clock.getDelta(),.05);const reduced=motionLevel===0;if(!reduced)elapsed+=dt*motionLevel;if(narrator.active){uiTick+=dt;if(uiTick>.08){narrator.tick();uiTick=0;}}else if(playing){progress=Math.min(1,progress+dt/75);uiTick+=dt;if(uiTick>.08){setProgress(progress,false);uiTick=0;}if(progress>=1){playing=false;$('play').textContent='▶ Play journey';setProgress(1);}}
 const {s,f}=state();const smooth=THREE.MathUtils.smoothstep(f,0,1),radii=radiusSets[selected];let r=THREE.MathUtils.lerp(radii[s],radii[Math.min(s+1,5)],smooth);star.scale.setScalar(r);star.visible=s>0||f>.1;star.rotation.y=elapsed*.04;starMat.uniforms.time.value=elapsed;const color=s>=3&&s<4?'#ff7735':s===5?(selected==='sun'?'#d8edff':'#a0caff'):selected==='sun'?'#ffc671':'#91bdff';starMat.uniforms.tint.value.set(color);starMat.uniforms.dark.value=s===5&&selected==='heavy'?1:0;glowMat.uniforms.tint.value.set(color);glow.scale.setScalar(r*1.27);glow.visible=star.visible&&!(s===5&&selected==='heavy');

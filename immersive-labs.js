@@ -91,7 +91,7 @@ export function createImmersiveLabs({scene, camera, controls, renderer, controll
     if(mode==='exhibit'&&next!=='exhibit'){saved.position.copy(camera.position);saved.target.copy(controls.target);saved.min=controls.minDistance;saved.max=controls.maxDistance;}
     mode=next;step=0;phase=0;angle=0;paused=false;fusion.reset();
     clear();root.visible=mode!=='exhibit'&&mode!=='onboarding';
-    $('immersiveMenu').close();$('immersiveHUD').hidden=mode==='exhibit';$('app').classList.toggle('immersive-active',mode!=='exhibit');
+    $('immersiveMenu').close();$('immersiveHUD').hidden=mode==='exhibit';$('app').classList.toggle('immersive-active',mode!=='exhibit');$('openImmersive')?.setAttribute('aria-pressed',String(mode!=='exhibit'));if(mode!=='exhibit')$('openJunior')?.setAttribute('aria-pressed','false');
     onMode(mode);view();rebuild();sync();
   }
   function view() {
